@@ -8,5 +8,9 @@
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Open Options to Grant Microphone Access"
   }
 }
