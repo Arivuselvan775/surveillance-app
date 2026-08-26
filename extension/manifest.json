@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Background Recorder",
+  "version": "1.0",
+  "description": "Records audio in the background.",
+  "permissions": [
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
