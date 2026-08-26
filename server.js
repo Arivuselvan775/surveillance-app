@@ -4,10 +4,18 @@ const socketIo = require('socket.io');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
+app.use(cors()); // Allow all origins for Express
+
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*", // Allow all origins for Socket.io
+        methods: ["GET", "POST"]
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 const SECRET_PASSWORD = process.env.SECRET_PASSWORD || 'admin';
