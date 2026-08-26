@@ -56,31 +56,6 @@ async function setupRecorder() {
     return true;
 }
 
-    mediaRecorder.onstop = async () => {
-        console.log('Uploading recording...');
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        audioChunks = []; // Reset for next recording
-
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.webm');
-
-        try {
-            const response = await fetch(`${SERVER_URL}/upload`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                console.log('Upload successful.');
-            } else {
-                console.log('Upload failed.');
-            }
-        } catch (err) {
-            console.error('Upload error:', err);
-        }
-    };
-}
-
 // Ensure the recorder is set up on load
 setupRecorder();
 
