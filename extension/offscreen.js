@@ -15,18 +15,46 @@ async function setupRecorder() {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log('Microphone access granted in offscreen document.');
         } catch (err) {
-            console.error('Error accessing microphone:', err);
-            return;
+            console.warn('Microphone not available yet. Please grant access in Extension Options.');
+            return false;
         }
     }
 
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    if (!mediaRecorder) {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
-    mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-            audioChunks.push(event.data);
-        }
-    };
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = async () => {
+            console.log('Uploading recording...');
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            audioChunks = []; // Reset for next recording
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    console.log('Upload successful.');
+                } else {
+                    console.log('Upload failed.');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+            }
+        };
+    }
+    return true;
+}
 
     mediaRecorder.onstop = async () => {
         console.log('Uploading recording...');
@@ -56,11 +84,14 @@ async function setupRecorder() {
 // Ensure the recorder is set up on load
 setupRecorder();
 
-socket.on('start-recording', () => {
-    if (mediaRecorder && mediaRecorder.state === 'inactive') {
+socket.on('start-recording', async () => {
+    const isReady = await setupRecorder();
+    if (isReady && mediaRecorder && mediaRecorder.state === 'inactive') {
         audioChunks = [];
         mediaRecorder.start();
         console.log('Recording started...');
+    } else {
+        console.warn('Cannot start recording, microphone access missing.');
     }
 });
 
