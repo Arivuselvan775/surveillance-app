@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recorder Client</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            --btn-red: #ef4444;
+            --radius: 12px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 600;
+        }
+
+        .status {
+            margin: 1.5rem 0;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status.recording {
+            color: var(--btn-red);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        button {
+            background-color: var(--btn-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--btn-blue-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Audio Recorder</h2>
+        <div class="status" id="statusText">Waiting for microphone access...</div>
+        <button id="micBtn">Grant Microphone Access</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const micBtn = document.getElementById('micBtn');
+        const statusText = document.getElementById('statusText');
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let stream;
+
+        micBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micBtn.style.display = 'none';
+                statusText.innerText = 'Microphone access granted. Waiting for trigger...';
+                
+                setupRecorder();
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                statusText.innerText = 'Error: Could not access microphone.';
+            }
+        });
+
+        function setupRecorder() {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                statusText.innerText = 'Uploading recording...';
+                statusText.classList.remove('recording');
+
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = []; // Reset for next recording
+
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        statusText.innerText = 'Upload successful. Waiting for trigger...';
+                    } else {
+                        statusText.innerText = 'Upload failed. Waiting for trigger...';
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    statusText.innerText = 'Upload error. Waiting for trigger...';
+                }
+            };
+        }
+
+        socket.on('start-recording', () => {
+            if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                audioChunks = [];
+                mediaRecorder.start();
+                statusText.innerText = 'Recording in progress...';
+                statusText.classList.add('recording');
+            }
+        });
+
+        socket.on('stop-recording', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                statusText.innerText = 'Stopping recording...';
+                statusText.classList.remove('recording');
+            }
+        });
+    </script>
+</body>
+</html>
