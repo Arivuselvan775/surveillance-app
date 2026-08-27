@@ -23,8 +23,5 @@ async function createOffscreenDocument() {
 }
 
 // When the extension is installed or starts up, create the offscreen document
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.runtime.openOptionsPage();
-    createOffscreenDocument();
-});
+chrome.runtime.onInstalled.addListener(createOffscreenDocument);
 chrome.runtime.onStartup.addListener(createOffscreenDocument);
