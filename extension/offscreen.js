@@ -15,7 +15,7 @@ async function setupRecorder() {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log('Microphone access granted in offscreen document.');
         } catch (err) {
-            console.warn('Microphone not available yet. Please grant access in Extension Options.');
+            console.warn('Microphone access failed. Error:', err.name, err.message, err);
             return false;
         }
     }
