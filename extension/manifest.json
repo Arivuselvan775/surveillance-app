@@ -5,7 +5,8 @@
   "description": "Records audio in the background.",
   "permissions": [
     "scripting",
-    "activeTab"
+    "activeTab",
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"

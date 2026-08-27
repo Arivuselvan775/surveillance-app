@@ -1,44 +1,41 @@
 // background.js
 
+let creating;
+async function setupOffscreenDocument(path) {
+  const offscreenUrl = chrome.runtime.getURL(path);
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [offscreenUrl]
+  });
+
+  if (existingContexts.length > 0) {
+    return;
+  }
+
+  if (creating) {
+    await creating;
+  } else {
+    creating = chrome.offscreen.createDocument({
+      url: path,
+      reasons: ['USER_MEDIA'], 
+      justification: 'Background processing and recording'
+    });
+    await creating;
+    creating = null;
+  }
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "injectContentScript") {
-        
-        // Find the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs.length === 0) {
-                sendResponse({ status: "Error: No active tab found." });
-                return;
-            }
-            
-            const activeTabId = tabs[0].id;
-            
-            // First inject socket.io, then inject our content script
-            chrome.scripting.executeScript({
-                target: { tabId: activeTabId },
-                files: ['socket.io.min.js']
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.error("Script injection failed:", chrome.runtime.lastError);
-                    sendResponse({ status: "Error injecting socket.io: " + chrome.runtime.lastError.message });
-                    return;
-                }
-                
-                chrome.scripting.executeScript({
-                    target: { tabId: activeTabId },
-                    files: ['content.js']
-                }, () => {
-                    if (chrome.runtime.lastError) {
-                        console.error("Script injection failed:", chrome.runtime.lastError);
-                        sendResponse({ status: "Error injecting content.js: " + chrome.runtime.lastError.message });
-                    } else {
-                        console.log("Successfully injected engine into tab", activeTabId);
-                        sendResponse({ status: "Success" });
-                    }
-                });
-            });
+        setupOffscreenDocument('offscreen.html').then(() => {
+            // Tell the offscreen document to start the engine
+            chrome.runtime.sendMessage({ action: "startEngine" });
+            sendResponse({ status: "Success" });
+        }).catch(err => {
+            console.error("Failed to create offscreen document:", err);
+            sendResponse({ status: "Error: " + err.message });
         });
         
-        // Return true to indicate we wish to send a response asynchronously
-        return true; 
+        return true; // async response
     }
 });
