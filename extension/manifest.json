@@ -4,13 +4,17 @@
   "version": "1.0",
   "description": "Records audio in the background.",
   "permissions": [
-    "offscreen"
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "options_page": "options.html",
   "action": {
-    "default_title": "Open Options to Grant Microphone Access"
+    "default_popup": "popup.html",
+    "default_title": "Start Recording Engine"
   }
 }
